@@ -4,7 +4,7 @@ This repository hosts the Docker Compose file necessary for deploying the [go-vs
 
 ### Setup
 
-1. Install [Git](https://github.com/git-guides/install-git), (https://docs.docker.com/get-docker/) [Docker](https://docs.docker.com/get-docker/) and [Docker compose v2](https://docs.docker.com/compose/install/).
+1. Install [Git](https://github.com/git-guides/install-git), [Docker](https://docs.docker.com/get-docker/) and [Docker compose v2](https://docs.docker.com/compose/install/).
 
 2. `git clone https://github.com/vsc-eco/vsc-deployment`
    Clone this repository as a regular user (not root/admin) to a desired location. It's crucial to ensure the Docker user has write permissions in the directory where you plan to initiate the Docker Compose file.
