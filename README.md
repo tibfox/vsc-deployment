@@ -7,21 +7,20 @@ This repository hosts the Docker Compose file necessary for deploying the VSC no
 1. Install [Docker](https://docs.docker.com/get-docker/) and [Docker compose v2](https://docs.docker.com/compose/install/).
 
 2. `git clone https://github.com/vsc-eco/vsc-deployment`
-   Clone this repository as a normal user (not root/admin) to a desired location. It's crucial to ensure the Docker user has write permissions in the directory where you plan to initiate the Docker Compose file.
+   Clone this repository as a regular user (not root/admin) to a desired location. It's crucial to ensure the Docker user has write permissions in the directory where you plan to initiate the Docker Compose file.
 
 3. `docker compose run init`
    Initialize the configuration files
 
-4. Edit the config file located at `./data/config/identityConfig.json` and be sure to add in your Hive username and active key
-
-5. `docker compose up -d`
-   Start the Docker containers. This will add a GraphQL server on port 8080, a MongoDB instance on port 27021, and a libp2p connection on port 10720.
+4. Edit the config file located at `./data/config/identityConfig.json` and be sure to add in your Hive username and active key. It is recommended that you use a dedicated Hive account like *myaccount.vsc* to run your node.
 
 ### Starting Up
 
-To launch the node, execute `docker compose up -d` from the command line (or `docker-compose up -d` depending on your docker compose version).
+1. `docker compose up -d`
+   Start the Docker containers from within the `vsc-deployment` folder.
+   This will add a GraphQL server on port 8080, a MongoDB instance on port 27021, and a libp2p connection on port 10720.
 
-For real-time log observation, use `docker logs go-vsc-node -f`.
+2. For real-time log observation, use `docker logs go-vsc-node -f`.
 
 ### Maintenance
 
