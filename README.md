@@ -1,10 +1,10 @@
 # VSC Node deployment
 
-This repository hosts the Docker Compose file necessary for deploying the VSC node.
+This repository hosts the Docker Compose file necessary for deploying the [go-vsc-node](https://github.com/vsc-eco/go-vsc-node).
 
 ### Setup
 
-1. Install [Docker](https://docs.docker.com/get-docker/) and [Docker compose v2](https://docs.docker.com/compose/install/).
+1. Install [Git](https://github.com/git-guides/install-git), (https://docs.docker.com/get-docker/) [Docker](https://docs.docker.com/get-docker/) and [Docker compose v2](https://docs.docker.com/compose/install/).
 
 2. `git clone https://github.com/vsc-eco/vsc-deployment`
    Clone this repository as a regular user (not root/admin) to a desired location. It's crucial to ensure the Docker user has write permissions in the directory where you plan to initiate the Docker Compose file.
