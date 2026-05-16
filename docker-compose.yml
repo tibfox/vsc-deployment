@@ -1,3 +1,13 @@
+# review2 HIGH #9/#10/#11/#12/#56 — network segmentation + least-privilege.
+#
+# Topology (was: one flat bridge with every container reachable from every
+# other):
+#   - dbnet  : INTERNAL (no internet). Only go-vsc-node/init <-> mongo.
+#   - btcnet : bridge (btcd needs BTC P2P egress). Only go-vsc-node <-> btcd,
+#              pinned subnet so btcd RPC can be scoped to it.
+#   - proxynet: INTERNAL. watchtower <-> docker-socket-proxy only.
+# A compromise of one container can no longer pivot to mongo (no auth) or
+# btcd RPC, and watchtower no longer mounts the raw docker socket.
 services:
   init:
     profiles: ["init"]
@@ -8,7 +18,8 @@ services:
     depends_on:
       - mongo
     networks:
-      - go-vsc-node
+      - dbnet
+      - btcnet
     volumes:
       - ./data:/home/app/app/data
   go-vsc-node: # name of the service
@@ -20,7 +31,8 @@ services:
       - mongo
       - btcd
     networks:
-      - go-vsc-node
+      - dbnet   # mongo (internal)
+      - btcnet  # btcd + outbound (Hive L1 / peers)
     ports:
       - 8080:8080
       - 10720:10720
@@ -45,10 +57,16 @@ services:
     image: mongo:8.0.17
     pull_policy: always
     restart: always
-    ports:
-      - 127.0.0.1:27021:27017
+    # review2 HIGH #10: the host publish (127.0.0.1:27021:27017) exposed an
+    # unauthenticated MongoDB to every process / user on the host. The node
+    # talks to mongo over the internal dbnet (mongo:27017), NOT this port, so
+    # it is removed. For occasional admin access use:
+    #   docker compose exec mongo mongosh
+    # (Enabling MongoDB auth is the recommended further hardening — see
+    # SECURITY.md for the migration steps; it is intentionally not forced
+    # here because it locks out existing data dirs until a user is created.)
     networks:
-      - go-vsc-node
+      - dbnet
     volumes:
       - ./data/vsc-db:/data/db
     healthcheck:
@@ -68,20 +86,53 @@ services:
         limits:
           memory: 1G
 
+  # review2 HIGH #11: watchtower previously bind-mounted /var/run/docker.sock
+  # read-write (full host control = container-escape vector). It now reaches a
+  # least-privilege docker-socket-proxy over an internal network instead; only
+  # the proxy touches the socket, and only the read endpoints + the POST verb
+  # watchtower needs to recreate containers are allowed.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: vsc-docker-socket-proxy
+    restart: always
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - NETWORKS=1
+      - POST=1   # required for watchtower to stop/recreate containers
+      # everything else stays at the proxy's deny-by-default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxynet
+
   # Watchtower automatically updates the containers
   watchtower:
     image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - docker-socket-proxy
     command: --label-enable --interval 3600 --cleanup
     environment:
       - DOCKER_API_VERSION=1.44
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    networks:
+      - proxynet
     restart: always
 
   btcd:
     image: bitcoin/bitcoin:29.3
     container_name: vsc-btcd
-    command: -rpcuser=vsc-node-user -rpcpassword=vsc-node-pass -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0 -prune=550 -dbcache=2048 -server=1 -listen=1
+    # review2 HIGH #9/#56: RPC was open to 0.0.0.0/0 with hardcoded creds
+    # passed on the command line (visible in `ps` / `docker inspect`). The
+    # creds are now env-overridable (set unique values in .env and mirror
+    # them in the node's BTC RPC config) and RPC is restricted to the pinned
+    # btcnet subnet — only go-vsc-node sits there.
+    command: >-
+      -rpcuser=${BTC_RPC_USER:-vsc-node-user}
+      -rpcpassword=${BTC_RPC_PASS:-vsc-node-pass}
+      -rpcallowip=172.28.7.0/24
+      -rpcbind=0.0.0.0
+      -prune=550 -dbcache=2048 -server=1 -listen=1
     restart: always
     volumes:
       - ./.btc-data:/home/bitcoin/.bitcoin
@@ -91,7 +142,16 @@ services:
         max-file: "5"
         max-size: "10m"
     networks:
-      - go-vsc-node
+      - btcnet
 networks:
-  go-vsc-node:
+  dbnet:
     driver: bridge
+    internal: true
+  btcnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.7.0/24
+  proxynet:
+    driver: bridge
+    internal: true
