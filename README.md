@@ -14,7 +14,22 @@ This repository hosts the Docker Compose file necessary for deploying the VSC no
 
 4. Edit the config file located at `./data/config/identityConfig.json` and be sure to add in your Hive username and active key
 
-5. `docker compose up -d`
+5. **Lock down the identity config (required).**
+   `./data/config/identityConfig.json` contains your BLS private seed, Hive
+   active key (WIF) and libp2p private key. Make it owner-only:
+
+   ```sh
+   chmod 700 ./data ./data/config
+   chmod 600 ./data/config/identityConfig.json
+   ```
+
+   Recent node images also self-enforce `0700`/`0600` on the config
+   directory and file on write, but run the commands above immediately so
+   an already-created world-readable file is tightened without waiting for
+   the next config write. Never run the node as root and never place
+   `./data` on a world-writable path.
+
+6. `docker compose up -d`
    Start the Docker containers. This will add a GraphQL server on port 8080, a MongoDB instance on port 27021, and a libp2p connection on port 10720.
 
 ### Starting Up
