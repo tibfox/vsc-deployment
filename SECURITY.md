@@ -64,3 +64,24 @@ so existing deployments don't break on upgrade — they are not safe to leave.
   outside this deployment repo. Set `PermitRootLogin no`, use a non-root
   sudo user + key-only auth. Run the stack as a non-root user; never place
   `./data` on a world-writable path (see README step 5).
+
+## #51 Image pinning vs. watchtower auto-update
+
+`vscnetwork/go-vsc-node:main` is a **mutable tag by design** — watchtower
+auto-pulling new node releases is the intended deployment workflow for
+testnet/mainnet nodes. Digest-pinning it would disable that, so it is an
+**operational policy decision for the operator**, not a blanket fix:
+
+- Keep `:main` + watchtower **only if** you trust the registry/publisher
+  and want hands-off node upgrades. Risk: a compromised/rolled `:main`
+  is auto-deployed.
+- For change-controlled environments, pin `go-vsc-node` to an immutable
+  `@sha256:<digest>` (or a versioned tag) and update deliberately;
+  watchtower will then leave it alone.
+
+What this branch **does** fix: `containrrr/watchtower` was itself
+unpinned (floating `:latest`) — the component that controls all updates
+must not silently update itself. It is now pinned to `1.7.1`. The
+remaining images are version-tagged (`mongo:8.0.17`,
+`docker-socket-proxy:0.3.0`, `bitcoin/bitcoin:29.3`); pin them to
+digests too if your threat model requires byte-for-byte reproducibility.

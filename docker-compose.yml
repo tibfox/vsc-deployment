@@ -108,7 +108,12 @@ services:
 
   # Watchtower automatically updates the containers
   watchtower:
-    image: containrrr/watchtower
+    # review2 #51: watchtower itself was unpinned (floating :latest) — the
+    # one component that controls image updates must not silently update
+    # itself. Pin it. (vscnetwork/go-vsc-node:main stays a mutable tag by
+    # design — auto-deploying node releases is the intended ops workflow;
+    # digest-pinning it is an ops-policy decision, see SECURITY.md #51.)
+    image: containrrr/watchtower:1.7.1
     depends_on:
       - docker-socket-proxy
     command: --label-enable --interval 3600 --cleanup
